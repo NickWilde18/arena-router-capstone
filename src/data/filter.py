@@ -4,7 +4,18 @@ Per docs/train-mmbert-arena-router.md §2.4:
   - Dedupe by question_id
   - Drop rows where toxic_chat_tag != 'safe'
   - Optional: drop non-English (mmBERT is multilingual; default off)
-  - Hash-based dedupe on lowercased+stripped first user turn
+  - Hash-based near-dup dedup on first user turn
+
+Deviation from docs (correction): the literal §2.4 wording 'dedupe by prompt hash'
+collapses every same-prompt battle to a single row, which contradicts §2.3's
+soft-label aggregation (which needs ≥2 battles per prompt to produce a
+non-degenerate distribution). Empirically (v1_strict run): 87.4% of prompts ended
+up with k=1 soft-label — i.e. soft labels degenerated to hard labels.
+
+We instead dedup by the tuple (prompt_hash, sorted(model_a, model_b)). This still
+removes literal duplicate battles (same prompt under the same model pair),
+but preserves the same prompt under *different* model pairs — restoring §2.3's
+intent. The ablation lives at reports/data_dedup_ablation.md.
 
 Usage:
     uv run python -m src.data.filter \\
@@ -81,9 +92,12 @@ def filter_battles(
     if dedupe_near_duplicates:
         prompts = df["conversation_a"].apply(_first_user_content)
         normalized = prompts.str.lower().str.strip()
-        hashes = normalized.apply(lambda s: hashlib.sha1(s.encode("utf-8")).hexdigest())
-        df = df[~hashes.duplicated()].reset_index(drop=True)
-        print(f"  After near-dup hash on first turn : {len(df):,}")
+        prompt_hashes = normalized.apply(lambda s: hashlib.sha1(s.encode("utf-8")).hexdigest())
+        pair_lo = df[["model_a", "model_b"]].min(axis=1)
+        pair_hi = df[["model_a", "model_b"]].max(axis=1)
+        key = pd.DataFrame({"h": prompt_hashes, "lo": pair_lo, "hi": pair_hi})
+        df = df[~key.duplicated()].reset_index(drop=True)
+        print(f"  After (prompt_hash, sorted-pair) dedup: {len(df):,}")
 
     print(f"Output: {len(df):,} rows ({len(df)/max(n0,1)*100:.1f}% kept)")
     return df
