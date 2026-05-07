@@ -233,6 +233,7 @@ def train(cfg: dict, smoke: bool = False) -> Path:
         metric_for_best_model=t_cfg.get("metric_for_best_model", "top1_accuracy"),
         greater_is_better=bool(t_cfg.get("greater_is_better", True)),
         seed=seed,
+        remove_unused_columns=False,    # keep label_id + soft_target for SoftLabelCollator
         report_to="none",
         **precision,
     )
