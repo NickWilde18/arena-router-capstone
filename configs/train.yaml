@@ -18,8 +18,8 @@ training:
   learning_rate: 2.0e-4                 # LoRA tolerates higher LR
   warmup_ratio: 0.06
   weight_decay: 0.01
-  fp16: true                            # set false on MPS (use bf16 if available)
-  evaluation_strategy: steps
+  fp16: true                            # request fp16; auto-downgraded to bf16 on MPS
+  eval_strategy: steps                  # transformers 5.x renamed from evaluation_strategy
   eval_steps: 500
   save_steps: 500
   logging_steps: 50
