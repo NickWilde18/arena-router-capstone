@@ -36,6 +36,7 @@ from transformers import (
     Trainer,
     TrainingArguments,
 )
+from transformers.trainer_pt_utils import LengthGroupedSampler
 
 from .soft_loss import soft_cross_entropy
 
@@ -69,7 +70,9 @@ def _build_dataset(jsonl_path: Path, label2id: dict[str, int]) -> Dataset:
 
 def _tokenize(ds: Dataset, tokenizer: PreTrainedTokenizerBase, max_length: int) -> Dataset:
     def _tok(batch):
-        return tokenizer(batch["text"], truncation=True, max_length=max_length)
+        out = tokenizer(batch["text"], truncation=True, max_length=max_length)
+        out["length"] = [len(ids) for ids in out["input_ids"]]
+        return out
     return ds.map(_tok, batched=True, remove_columns=["text"])
 
 
@@ -85,6 +88,8 @@ class SoftLabelCollator:
     def __call__(self, features: list[dict]) -> dict[str, torch.Tensor]:
         soft = torch.tensor([f.pop("soft_target") for f in features], dtype=torch.float32)
         labels = torch.tensor([f.pop("label_id") for f in features], dtype=torch.long)
+        for f in features:
+            f.pop("length", None)   # group_by_length helper, not a model input
         batch = self.tokenizer.pad(features, padding=True, return_tensors="pt")
         batch["labels"] = labels
         batch["soft_target"] = soft
@@ -97,11 +102,32 @@ class SoftLabelCollator:
 
 
 class SoftLabelTrainer(Trainer):
-    def __init__(self, *args, loss_type: str = "kl_div", **kwargs):
+    def __init__(
+        self,
+        *args,
+        loss_type: str = "kl_div",
+        group_by_length: bool = False,
+        compile_dynamic: bool = False,
+        compile_backend: str = "inductor",
+        compile_mode: str = "default",
+        **kwargs,
+    ):
         super().__init__(*args, **kwargs)
         if loss_type not in ("kl_div", "cross_entropy"):
             raise ValueError(f"loss_type must be kl_div|cross_entropy, got {loss_type}")
         self.loss_type = loss_type
+        self._group_by_length = group_by_length
+        # transformers built-in `torch_compile` recompiles per shape, which kills
+        # the speedup when paired with group_by_length (many distinct seq lens).
+        # Manual wrap with dynamic=True compiles a single graph that handles
+        # variable shapes via symbolic dims.
+        if compile_dynamic:
+            self.model = torch.compile(
+                self.model,
+                dynamic=True,
+                backend=compile_backend,
+                mode=compile_mode,
+            )
 
     def compute_loss(self, model, inputs, return_outputs=False, num_items_in_batch=None):
         soft_target = inputs.pop("soft_target", None)
@@ -113,6 +139,20 @@ class SoftLabelTrainer(Trainer):
         else:
             loss = F.cross_entropy(logits, labels)
         return (loss, outputs) if return_outputs else loss
+
+    def _get_train_sampler(self, train_dataset=None):
+        # transformers 5.x removed the `group_by_length` TrainingArgument; we
+        # restore it via a custom sampler. Cuts padding waste 5-10x given the
+        # heavy length skew (median 16 tokens, p99 532).
+        if not self._group_by_length:
+            return super()._get_train_sampler(train_dataset)
+        ds = train_dataset if train_dataset is not None else self.train_dataset
+        lengths = list(ds["length"])
+        return LengthGroupedSampler(
+            batch_size=self.args.train_batch_size,
+            dataset=ds,
+            lengths=lengths,
+        )
 
 
 # -----------------------------------------------------------------------------
@@ -146,9 +186,20 @@ def make_compute_metrics(eval_dataset: Dataset):
 # -----------------------------------------------------------------------------
 
 
-def _resolve_precision(use_fp16: bool) -> dict:
+def _resolve_precision(t_cfg: dict) -> dict:
+    """Honor explicit bf16/fp16 from config; fall back to safe per-device default.
+
+    Config may set bf16: true (preferred for ModernBERT) or fp16: true.
+    bf16 takes precedence if both are truthy.
+    """
+    use_bf16 = bool(t_cfg.get("bf16", False))
+    use_fp16 = bool(t_cfg.get("fp16", False))
     if torch.cuda.is_available():
-        return {"fp16": use_fp16}
+        if use_bf16:
+            return {"bf16": True}
+        if use_fp16:
+            return {"fp16": True}
+        return {}
     if torch.backends.mps.is_available():
         return {"bf16": True}     # fp16 unstable on MPS
     return {}
@@ -163,6 +214,8 @@ def train(cfg: dict, smoke: bool = False) -> Path:
     seed = int(cfg.get("seed", 42))
     torch.manual_seed(seed)
     np.random.seed(seed)
+    # Free speedup on Ada/Hopper for fp32 matmul ops outside the bf16 autocast.
+    torch.set_float32_matmul_precision("high")
 
     # --- labels ---
     with open(cfg["data"]["label2id_file"]) as f:
@@ -193,6 +246,10 @@ def train(cfg: dict, smoke: bool = False) -> Path:
         task_type=TaskType.SEQ_CLS,
     )
     model = get_peft_model(model, peft_cfg)
+    # PEFT freezes base model; for gradient_checkpointing to propagate grads
+    # through frozen layers, embeddings must opt-in to requires_grad.
+    if bool(cfg.get("training", {}).get("gradient_checkpointing", False)):
+        model.enable_input_require_grads()
     model.print_trainable_parameters()
 
     # --- datasets ---
@@ -210,7 +267,7 @@ def train(cfg: dict, smoke: bool = False) -> Path:
     output_dir = Path(t_cfg["output_dir"])
     if smoke:
         output_dir = output_dir.parent / (output_dir.name + "_smoke")
-    precision = _resolve_precision(bool(t_cfg.get("fp16", True)))
+    precision = _resolve_precision(t_cfg)
 
     eval_strategy = t_cfg.get("eval_strategy", t_cfg.get("evaluation_strategy", "steps"))
     args = TrainingArguments(
@@ -235,8 +292,16 @@ def train(cfg: dict, smoke: bool = False) -> Path:
         seed=seed,
         remove_unused_columns=False,    # keep label_id + soft_target for SoftLabelCollator
         report_to="none",
+        dataloader_num_workers=int(t_cfg.get("dataloader_num_workers", 0)),
+        dataloader_pin_memory=bool(t_cfg.get("dataloader_pin_memory", True)),
+        gradient_checkpointing=bool(t_cfg.get("gradient_checkpointing", False)),
+        gradient_checkpointing_kwargs={"use_reentrant": False},
+        # transformers built-in torch_compile recompiles per shape and lacks a
+        # `dynamic=True` knob; we wrap manually in SoftLabelTrainer instead.
         **precision,
     )
+    compile_dynamic = bool(t_cfg.get("torch_compile", False))
+    group_by_length = bool(t_cfg.get("group_by_length", False))
 
     loss_type = cfg.get("loss", {}).get("type", "kl_div")
     print(f"Loss type:  {loss_type}")
@@ -251,6 +316,10 @@ def train(cfg: dict, smoke: bool = False) -> Path:
         data_collator=SoftLabelCollator(tokenizer=tokenizer),
         compute_metrics=make_compute_metrics(val_ds),
         loss_type=loss_type,
+        group_by_length=group_by_length,
+        compile_dynamic=compile_dynamic,
+        compile_backend=t_cfg.get("torch_compile_backend", "inductor"),
+        compile_mode=t_cfg.get("torch_compile_mode", "default"),
     )
 
     trainer.train()
