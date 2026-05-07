@@ -1,9 +1,5 @@
 model:
-  base: jhu-clsp/mmBERT-base
-  # Train-set token-length distribution: median 16, p99 532, max 1675.
-  # docs §4 example uses 2048; that wastes ~98% compute on padding here.
-  # 512 covers 99% naturally; 1.17% rows truncated (tail mostly long instructions
-  # whose first 512 tokens still carry the routing signal).
+  base: jhu-clsp/mmBERT-base    # vanilla beat yarn-pretrained on top-5 (0.2492 vs 0.2397)
   max_length: 512               # docs §4: 2048; reduced based on data distribution
 
 lora:
@@ -18,12 +14,10 @@ lora:
   task_type: SEQ_CLS
 
 training:
-  output_dir: outputs/adapter_best
-  # Best config from the ablation matrix (reports/ablation_matrix.md):
-  # loss=cross_entropy, lr=5e-5, warmup=0.1, no class_weight, LoRA r=16.
-  # Best val top1=0.1254 (epoch 3.56), test top1=0.1232 (+0.0045 over
-  # majority 0.1187). Capacity sweep r=16/32/64 all land at 0.1254-0.1258
-  # (within noise) - data-side ceiling, not optimization-shaped.
+  output_dir: outputs/top5_ce
+  # Best top-5 config: CE + lr=5e-5 + r=16 + no class_weight.
+  # Val top1=0.2492 (epoch 5.0), test top1=0.2380 (+1.26pp over majority 0.2254).
+  # Variants tried: yarn pretrain (worse 0.2397), inv_freq even gentle (worse 0.2358).
   num_train_epochs: 5                   # docs §4: 3
   # Larger batches saturate Tensor Cores on RTX 4070 (was 50W at batch=32).
   # gradient_checkpointing trades ~30% per-step compute for ~40% activation
@@ -58,12 +52,12 @@ training:
 loss:
   type: cross_entropy           # 'kl_div' | 'cross_entropy'
   use_soft_label: false         # CE uses argmax label, not soft target
-  class_weight: null            # 'inv_freq' | null  - both inv_freq runs collapsed below random
+  class_weight: null            # 'inv_freq' tested on 20-class+top-5; both worse
 
 data:
-  train_file: data/processed/train.jsonl
-  val_file:   data/processed/val.jsonl
-  test_file:  data/processed/test.jsonl
-  label2id_file: data/processed/label2id.json
+  train_file: data/processed/top5/train.jsonl
+  val_file:   data/processed/top5/val.jsonl
+  test_file:  data/processed/top5/test.jsonl
+  label2id_file: data/processed/top5/label2id.json
 
 seed: 42

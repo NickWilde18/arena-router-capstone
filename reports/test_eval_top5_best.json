@@ -1,0 +1,75 @@
+{
+  "n_eval": 1269,
+  "top1_accuracy": 0.23798266351457842,
+  "expected_winrate": 0.23838604986667633,
+  "ece": 0.02484285836148394,
+  "majority_class": "gpt-4",
+  "majority_top1": 0.22537431048069345,
+  "delta_top1_vs_majority": 0.012608353033884967,
+  "pred_distribution": {
+    "claude-v1": 75,
+    "gpt-3.5-turbo": 179,
+    "gpt-4": 432,
+    "koala-13b": 30,
+    "vicuna-13b": 553
+  },
+  "per_class_recall": {
+    "claude-v1": 0.06666666666666667,
+    "gpt-3.5-turbo": 0.18359375,
+    "gpt-4": 0.36363636363636365,
+    "koala-13b": 0.0297029702970297,
+    "vicuna-13b": 0.45263157894736844
+  },
+  "top_confusion_pairs": [
+    {
+      "true": "gpt-4",
+      "pred": "vicuna-13b",
+      "count": 127
+    },
+    {
+      "true": "gpt-3.5-turbo",
+      "pred": "vicuna-13b",
+      "count": 107
+    },
+    {
+      "true": "koala-13b",
+      "pred": "vicuna-13b",
+      "count": 99
+    },
+    {
+      "true": "claude-v1",
+      "pred": "gpt-4",
+      "count": 96
+    },
+    {
+      "true": "claude-v1",
+      "pred": "vicuna-13b",
+      "count": 91
+    },
+    {
+      "true": "vicuna-13b",
+      "pred": "gpt-4",
+      "count": 88
+    },
+    {
+      "true": "gpt-3.5-turbo",
+      "pred": "gpt-4",
+      "count": 77
+    },
+    {
+      "true": "koala-13b",
+      "pred": "gpt-4",
+      "count": 67
+    },
+    {
+      "true": "vicuna-13b",
+      "pred": "gpt-3.5-turbo",
+      "count": 47
+    },
+    {
+      "true": "gpt-4",
+      "pred": "gpt-3.5-turbo",
+      "count": 31
+    }
+  ]
+}
