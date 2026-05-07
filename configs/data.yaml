@@ -1,0 +1,21 @@
+dataset:
+  hf_id: lmsys/chatbot_arena_conversations
+  revision: main
+
+filter:
+  drop_unsafe: true             # toxic_chat_tag != 'safe' or any openai_moderation flag
+  drop_non_english: false       # mmBERT is multilingual; default keep all langs
+  dedupe_by_question_id: true
+  dedupe_near_duplicates: true  # hash on lowercased+stripped first turn
+
+labels:
+  min_class_frequency: 500      # drop models with fewer battles than this
+  drop_bothbad: true            # winner == 'tie (bothbad)' has no positive signal
+  tie_weight: 0.5               # winner == 'tie' contributes 0.5 to each side
+
+split:
+  train: 0.8
+  val:   0.1
+  test:  0.1
+  stratify: true                # stratify by argmax(soft_label)
+  seed: 42

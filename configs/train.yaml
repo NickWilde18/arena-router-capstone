@@ -1,0 +1,41 @@
+model:
+  base: jhu-clsp/mmBERT-base
+  max_length: 2048              # first-turn prompts; raise to 32K only if needed
+
+lora:
+  r: 16
+  alpha: 32
+  dropout: 0.05
+  target_modules: [query, key, value, dense]
+  task_type: SEQ_CLS
+
+training:
+  output_dir: outputs/adapter_v1
+  num_train_epochs: 3
+  per_device_train_batch_size: 32      # RTX 4070 12GB; drop to 8 on MPS
+  per_device_eval_batch_size: 64
+  gradient_accumulation_steps: 1
+  learning_rate: 2.0e-4                 # LoRA tolerates higher LR
+  warmup_ratio: 0.06
+  weight_decay: 0.01
+  fp16: true                            # set false on MPS (use bf16 if available)
+  evaluation_strategy: steps
+  eval_steps: 500
+  save_steps: 500
+  logging_steps: 50
+  load_best_model_at_end: true
+  metric_for_best_model: top1_accuracy
+  greater_is_better: true
+
+loss:
+  type: kl_div                  # 'kl_div' | 'cross_entropy'
+  use_soft_label: true
+  class_weight: null            # 'inv_freq' | null
+
+data:
+  train_file: data/processed/train.jsonl
+  val_file:   data/processed/val.jsonl
+  test_file:  data/processed/test.jsonl
+  label2id_file: data/processed/label2id.json
+
+seed: 42

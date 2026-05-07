@@ -1,0 +1,47 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+*.egg
+
+# Virtualenv / package managers
+.venv/
+venv/
+env/
+.uv-cache/
+
+# Data (large, not in git) — keep .gitkeep markers
+data/raw/
+data/processed/
+*.parquet
+*.jsonl
+!**/.gitkeep
+
+# Model outputs / checkpoints
+outputs/
+checkpoints/
+runs/
+wandb/
+*.safetensors
+*.bin
+*.pt
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS / Editor
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Env / Secrets
+.env
+.env.*
+!.env.example
+
+# HF cache
+.cache/
