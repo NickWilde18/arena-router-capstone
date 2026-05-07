@@ -20,10 +20,10 @@ lora:
 training:
   output_dir: outputs/adapter_best
   # Best config from the ablation matrix (reports/ablation_matrix.md):
-  # loss=cross_entropy, lr=5e-5, warmup=0.1, no class_weight.
+  # loss=cross_entropy, lr=5e-5, warmup=0.1, no class_weight, LoRA r=16.
   # Best val top1=0.1254 (epoch 3.56), test top1=0.1232 (+0.0045 over
-  # majority 0.1187). Training-side improvements appear saturated; the
-  # remaining gap is data-shaped, not optimization-shaped.
+  # majority 0.1187). Capacity sweep r=16/32/64 all land at 0.1254-0.1258
+  # (within noise) - data-side ceiling, not optimization-shaped.
   num_train_epochs: 5                   # docs §4: 3
   # Larger batches saturate Tensor Cores on RTX 4070 (was 50W at batch=32).
   # gradient_checkpointing trades ~30% per-step compute for ~40% activation

@@ -28,7 +28,8 @@ axis cleanly; the v1 vs v2 axis was already covered in
 ## Ablation cells run
 
 All numbers are **best val top1 across in-run evals** (the checkpoint that
-`load_best_model_at_end` selects).
+`load_best_model_at_end` selects). All cells share LoRA `r=16, α=32` unless
+noted; capacity sweep is in its own table below.
 
 | #   | loss          | lr     | warmup | class_weight | best val top1 | best val exp_winrate | best epoch | notes |
 |-----|---------------|--------|--------|--------------|---------------|----------------------|------------|-------|
@@ -36,8 +37,19 @@ All numbers are **best val top1 across in-run evals** (the checkpoint that
 | L1  | KL  | 1e-4  | 0.10  | none      | 0.1214 | 0.1244 | 3.56 | top1 frozen at .1214 across all evals |
 | L2  | KL  | 2e-4  | 0.06  | none      | 0.1156 | 0.1164 | 1.78 | overfit; .1017 at ep 3.56, .0946 at ep 5 |
 | C1  | KL  | 5e-5  | 0.10  | inv_freq  | **0.0558** | 0.0537 | (aborted at ep 1.78) | rare-class collapse; killed |
-| **CE** | CE | 5e-5  | 0.10  | none      | **0.1254** | 0.1264 | 3.56 | best of matrix; saved as final |
+| **CE** | CE | 5e-5  | 0.10  | none      | **0.1254** | 0.1264 | 3.56 | best non-capacity cell; saved as final |
 | CE+IF | CE | 5e-5  | 0.10  | inv_freq  | 0.0348 | 0.0321 | (aborted at ep 1.78) | also rare-class collapse; killed |
+
+### Capacity ablation (CE + lr=5e-5, vary LoRA r)
+
+| LoRA r | LoRA α | trainable params | trainable % | best val top1 | best val exp_winrate |
+|--------|--------|------------------|-------------|---------------|----------------------|
+| 16     | 32     | 3,419,156        | 1.10%       | 0.1254        | 0.1264               |
+| 32     | 64     | 6,822,932        | 2.17%       | 0.1258        | 0.1272               |
+| 64     | 128    | 13,630,484       | 4.24%       | 0.1258        | 0.1292               |
+
+Doubling and quadrupling the adapter budget moves val top1 by 0.0004 — one
+sample of noise. **Capacity is not the bottleneck.**
 
 Reference baselines:
 
@@ -152,36 +164,39 @@ no class weighting. Saved at `outputs/ablation_ce_loss/final/`.
 
 What is **worth** trying before the defense (5/16):
 
-- **r=32 or r=64 LoRA** — more expressive adapter could in principle
-  escape the {vicuna, gpt-4} basin. Cheap to test (~10 min each).
-- **Conversation-context features** — concatenate `model_a` ID into the
-  input (oracle baseline); if oracle still hits ~0.13, it confirms the
-  data-side ceiling claim.
+- **Conversation-context features** — concatenate `model_a` ID or first
+  assistant turn into the input. Cheapest oracle baseline: include the
+  winner's identity in the prompt; if oracle hits ≈1.0 we know the
+  encoder *can* learn the mapping when given an informative input, which
+  isolates the bottleneck cleanly to "first-turn prompt is too lean".
 - **Output-side temperature calibration** — does not change top1 but may
   improve ECE / expected_winrate.
 
-What is **not worth** chasing:
+What is **not worth** chasing (already ruled out by ablation):
 
-- More lr / warmup / weight_decay tuning — already swept and the gradients
-  are not the bottleneck.
-- More aggressive class balancing — degrades accuracy.
-- Longer training — eval top1 already peaks at epoch 3.56 and decays;
+- **lr / warmup / weight_decay** — three lr settings span 0.116-0.122,
+  same noise band.
+- **class_weight** — both inv_freq attempts collapsed below random.
+- **LoRA capacity** — r=16/32/64 all land at top1 ≈ 0.1255 ± 0.0004.
+- **Longer training** — eval top1 peaks at epoch 3.56 and decays;
   extending epochs just overfits.
 
 ## Defense framing (L3 #4)
 
-> "After fixing the LoRA target mismatch (L3 #3), we ran the orthogonal
-> hyperparameter axes — three learning rates, two loss forms, two class-
-> weighting schemes — and found a hard ceiling at val top1 ≈ 0.125 vs
-> majority 0.119. Diagnostic eval on saved adapters revealed the
-> bottleneck: the model collapses to predicting vicuna-13b for 58–68% of
-> prompts and gpt-4 for most of the rest, never predicting 14 of the 20
-> classes. The collapse traces to the soft-label tie-mass distribution,
-> which CE partially mitigates and `inv_freq` cannot help with — but the
-> deeper reason is that the median Arena first-turn prompt has 16 tokens,
-> too few to encode which model would have won. The remaining 0.5pp gap
-> over majority is most plausibly the Bayes-optimal margin given the
-> data, not a hyperparameter we have left on the table."
+> "After fixing the LoRA target mismatch (L3 #3), we ran four orthogonal
+> axes — three learning rates, two loss forms, two class-weighting
+> schemes, three LoRA ranks (r=16/32/64) — and found a hard ceiling at
+> val top1 ≈ 0.125 vs majority 0.119. Diagnostic eval on saved adapters
+> revealed the bottleneck: the model collapses to predicting vicuna-13b
+> for 58–68% of prompts and gpt-4 for most of the rest, never predicting
+> 14 of the 20 classes. The collapse traces to the soft-label tie-mass
+> distribution, which CE partially mitigates and `inv_freq` cannot help
+> with — but the deeper reason is that the median Arena first-turn
+> prompt has 16 tokens, too few to encode which model would have won.
+> Quadrupling LoRA capacity (r=16 → r=64) moved top1 by 0.0004 = one
+> sample. The remaining 0.5pp gap over majority is most plausibly the
+> Bayes-optimal margin given the data, not a hyperparameter we have left
+> on the table."
 
 L3 findings to date:
 
