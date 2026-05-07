@@ -10,13 +10,15 @@ lora:
   task_type: SEQ_CLS
 
 training:
-  output_dir: outputs/adapter_v1
-  num_train_epochs: 3
+  output_dir: outputs/adapter_v2_kl_corrected
+  # docs §4 strict (lr=2e-4, epochs=3, warmup=0.06) produced sub-majority baseline
+  # (top1 0.100 < majority 0.119). See reports/baseline_v2_kl.md for diagnosis.
+  num_train_epochs: 5                   # docs §4: 3
   per_device_train_batch_size: 32      # RTX 4070 12GB; drop to 8 on MPS
   per_device_eval_batch_size: 64
   gradient_accumulation_steps: 1
-  learning_rate: 2.0e-4                 # LoRA tolerates higher LR
-  warmup_ratio: 0.06
+  learning_rate: 5.0e-5                 # docs §4: 2e-4 (LoRA generic); too high for 20-class head
+  warmup_ratio: 0.1                     # docs §4: 0.06; raised in line with lower lr
   weight_decay: 0.01
   fp16: true                            # request fp16; auto-downgraded to bf16 on MPS
   eval_strategy: steps                  # transformers 5.x renamed from evaluation_strategy
