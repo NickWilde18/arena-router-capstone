@@ -32,6 +32,23 @@ def _first_user_content(conversation) -> str:
         return ""
 
 
+def _is_safe(toxic_chat_tag) -> bool:
+    """Per docs §2.4 'toxic_chat_tag != safe' filter.
+
+    Real schema: dict of {detector_name: {'flagged': bool, ...}}.
+    A row is 'safe' iff no detector flagged it.
+    """
+    if toxic_chat_tag is None:
+        return True
+    try:
+        for det in toxic_chat_tag.values():
+            if isinstance(det, dict) and det.get("flagged"):
+                return False
+    except (AttributeError, TypeError):
+        pass
+    return True
+
+
 def filter_battles(
     df: pd.DataFrame,
     drop_unsafe: bool = True,
@@ -44,7 +61,8 @@ def filter_battles(
     if "language" in df.columns:
         print(f"  language top-5: {df['language'].value_counts().head(5).to_dict()}")
     if "toxic_chat_tag" in df.columns:
-        print(f"  toxic_chat_tag: {df['toxic_chat_tag'].value_counts().to_dict()}")
+        n_unsafe = (~df["toxic_chat_tag"].apply(_is_safe)).sum()
+        print(f"  toxic_chat_tag flagged by ≥1 detector: {n_unsafe:,} / {n0:,}")
     if "winner" in df.columns:
         print(f"  winner        : {df['winner'].value_counts().to_dict()}")
 
@@ -53,8 +71,8 @@ def filter_battles(
         print(f"  After question_id dedup           : {len(df):,}")
 
     if drop_unsafe and "toxic_chat_tag" in df.columns:
-        df = df[df["toxic_chat_tag"] == "safe"].reset_index(drop=True)
-        print(f"  After toxic_chat_tag == 'safe'    : {len(df):,}")
+        df = df[df["toxic_chat_tag"].apply(_is_safe)].reset_index(drop=True)
+        print(f"  After toxic_chat_tag == safe       : {len(df):,}")
 
     if drop_non_english and "language" in df.columns:
         df = df[df["language"].astype(str).str.lower().isin({"english", "en"})].reset_index(drop=True)
