@@ -110,6 +110,7 @@ class SoftLabelTrainer(Trainer):
         compile_dynamic: bool = False,
         compile_backend: str = "inductor",
         compile_mode: str = "default",
+        class_weights: torch.Tensor | None = None,
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
@@ -117,6 +118,7 @@ class SoftLabelTrainer(Trainer):
             raise ValueError(f"loss_type must be kl_div|cross_entropy, got {loss_type}")
         self.loss_type = loss_type
         self._group_by_length = group_by_length
+        self.class_weights = class_weights  # (num_classes,) or None
         # transformers built-in `torch_compile` recompiles per shape, which kills
         # the speedup when paired with group_by_length (many distinct seq lens).
         # Manual wrap with dynamic=True compiles a single graph that handles
@@ -134,10 +136,16 @@ class SoftLabelTrainer(Trainer):
         labels = inputs.pop("labels")
         outputs = model(**inputs)
         logits = outputs.logits
-        if self.loss_type == "kl_div" and soft_target is not None:
-            loss = soft_cross_entropy(logits, soft_target)
+        if self.class_weights is not None:
+            cw = self.class_weights.to(logits.device, dtype=logits.dtype)
+            sample_w = cw[labels]
         else:
-            loss = F.cross_entropy(logits, labels)
+            cw = None
+            sample_w = None
+        if self.loss_type == "kl_div" and soft_target is not None:
+            loss = soft_cross_entropy(logits, soft_target, sample_weights=sample_w)
+        else:
+            loss = F.cross_entropy(logits, labels, weight=cw)
         return (loss, outputs) if return_outputs else loss
 
     def _get_train_sampler(self, train_dataset=None):
@@ -184,6 +192,20 @@ def make_compute_metrics(eval_dataset: Dataset):
 # -----------------------------------------------------------------------------
 # Precision: pick what works on the active accelerator
 # -----------------------------------------------------------------------------
+
+
+def _compute_inv_freq_weights(label_ids: list[int], n_classes: int) -> torch.Tensor:
+    """Inverse-frequency class weights normalized to mean=1.
+
+    Pure 1/freq pushes per-step gradients of the rarest class up by ~10x in our
+    20-class Arena split (1.1% vs 11.9% min/max). Mean-1 normalization keeps
+    overall loss scale unchanged so downstream lr tuning still applies.
+    """
+    counts = np.bincount(label_ids, minlength=n_classes).astype(np.float32)
+    counts = np.maximum(counts, 1.0)
+    weights = 1.0 / counts
+    weights = weights * (n_classes / weights.sum())
+    return torch.tensor(weights, dtype=torch.float32)
 
 
 def _resolve_precision(t_cfg: dict) -> dict:
@@ -304,6 +326,18 @@ def train(cfg: dict, smoke: bool = False) -> Path:
     group_by_length = bool(t_cfg.get("group_by_length", False))
 
     loss_type = cfg.get("loss", {}).get("type", "kl_div")
+    class_weight_mode = cfg.get("loss", {}).get("class_weight")
+    if class_weight_mode == "inv_freq":
+        class_weights = _compute_inv_freq_weights(
+            list(train_ds["label_id"]), n_classes
+        )
+        print(f"Class weights: inv_freq (min={class_weights.min().item():.3f}, "
+              f"max={class_weights.max().item():.3f}, mean={class_weights.mean().item():.3f})")
+    elif class_weight_mode in (None, "null", False):
+        class_weights = None
+    else:
+        raise ValueError(f"unknown class_weight: {class_weight_mode!r}")
+
     print(f"Loss type:  {loss_type}")
     print(f"Precision:  {precision or 'fp32'}")
     print(f"Output dir: {output_dir}")
@@ -320,6 +354,7 @@ def train(cfg: dict, smoke: bool = False) -> Path:
         compile_dynamic=compile_dynamic,
         compile_backend=t_cfg.get("torch_compile_backend", "inductor"),
         compile_mode=t_cfg.get("torch_compile_mode", "default"),
+        class_weights=class_weights,
     )
 
     trainer.train()

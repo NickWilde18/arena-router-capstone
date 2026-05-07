@@ -1,0 +1,105 @@
+{
+  "n_eval": 2241,
+  "top1_accuracy": 0.12360553324408746,
+  "expected_winrate": 0.12616831064224243,
+  "ece": 0.015423731887542686,
+  "majority_class": "gpt-4",
+  "majority_top1": 0.11914323962516733,
+  "delta_top1_vs_majority": 0.0044622936189201295,
+  "pred_distribution": {
+    "RWKV-4-Raven-14B": 0,
+    "alpaca-13b": 0,
+    "chatglm-6b": 0,
+    "claude-instant-v1": 0,
+    "claude-v1": 113,
+    "dolly-v2-12b": 0,
+    "fastchat-t5-3b": 0,
+    "gpt-3.5-turbo": 60,
+    "gpt-4": 523,
+    "gpt4all-13b-snoozy": 0,
+    "guanaco-33b": 0,
+    "koala-13b": 18,
+    "llama-13b": 0,
+    "mpt-7b-chat": 0,
+    "oasst-pythia-12b": 1,
+    "palm-2": 0,
+    "stablelm-tuned-alpha-7b": 0,
+    "vicuna-13b": 1526,
+    "vicuna-7b": 0,
+    "wizardlm-13b": 0
+  },
+  "per_class_recall": {
+    "RWKV-4-Raven-14B": 0.0,
+    "alpaca-13b": 0.0,
+    "chatglm-6b": 0.0,
+    "claude-instant-v1": 0.0,
+    "claude-v1": 0.05333333333333334,
+    "dolly-v2-12b": 0.0,
+    "fastchat-t5-3b": 0.0,
+    "gpt-3.5-turbo": 0.03829787234042553,
+    "gpt-4": 0.24344569288389514,
+    "gpt4all-13b-snoozy": 0.0,
+    "guanaco-33b": 0.0,
+    "koala-13b": 0.016129032258064516,
+    "llama-13b": 0.0,
+    "mpt-7b-chat": 0.0,
+    "oasst-pythia-12b": 0.0,
+    "palm-2": 0.0,
+    "stablelm-tuned-alpha-7b": 0.0,
+    "vicuna-13b": 0.7121212121212122,
+    "vicuna-7b": 0.0,
+    "wizardlm-13b": 0.0
+  },
+  "top_confusion_pairs": [
+    {
+      "true": "gpt-4",
+      "pred": "vicuna-13b",
+      "count": 174
+    },
+    {
+      "true": "gpt-3.5-turbo",
+      "pred": "vicuna-13b",
+      "count": 150
+    },
+    {
+      "true": "claude-v1",
+      "pred": "vicuna-13b",
+      "count": 148
+    },
+    {
+      "true": "koala-13b",
+      "pred": "vicuna-13b",
+      "count": 134
+    },
+    {
+      "true": "claude-instant-v1",
+      "pred": "vicuna-13b",
+      "count": 90
+    },
+    {
+      "true": "oasst-pythia-12b",
+      "pred": "vicuna-13b",
+      "count": 78
+    },
+    {
+      "true": "alpaca-13b",
+      "pred": "vicuna-13b",
+      "count": 78
+    },
+    {
+      "true": "RWKV-4-Raven-14B",
+      "pred": "vicuna-13b",
+      "count": 73
+    },
+    {
+      "true": "palm-2",
+      "pred": "vicuna-13b",
+      "count": 66
+    },
+    {
+      "true": "claude-v1",
+      "pred": "gpt-4",
+      "count": 60
+    }
+  ]
+}

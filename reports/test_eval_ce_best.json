@@ -1,0 +1,105 @@
+{
+  "n_eval": 2241,
+  "top1_accuracy": 0.12315930388219545,
+  "expected_winrate": 0.1199154406785965,
+  "ece": 0.017081117155242315,
+  "majority_class": "gpt-4",
+  "majority_top1": 0.11869701026327532,
+  "delta_top1_vs_majority": 0.0044622936189201295,
+  "pred_distribution": {
+    "RWKV-4-Raven-14B": 0,
+    "alpaca-13b": 0,
+    "chatglm-6b": 0,
+    "claude-instant-v1": 5,
+    "claude-v1": 114,
+    "dolly-v2-12b": 0,
+    "fastchat-t5-3b": 0,
+    "gpt-3.5-turbo": 30,
+    "gpt-4": 768,
+    "gpt4all-13b-snoozy": 0,
+    "guanaco-33b": 0,
+    "koala-13b": 19,
+    "llama-13b": 0,
+    "mpt-7b-chat": 0,
+    "oasst-pythia-12b": 1,
+    "palm-2": 0,
+    "stablelm-tuned-alpha-7b": 0,
+    "vicuna-13b": 1304,
+    "vicuna-7b": 0,
+    "wizardlm-13b": 0
+  },
+  "per_class_recall": {
+    "RWKV-4-Raven-14B": 0.0,
+    "alpaca-13b": 0.0,
+    "chatglm-6b": 0.0,
+    "claude-instant-v1": 0.007042253521126761,
+    "claude-v1": 0.05333333333333334,
+    "dolly-v2-12b": 0.0,
+    "fastchat-t5-3b": 0.0,
+    "gpt-3.5-turbo": 0.00423728813559322,
+    "gpt-4": 0.3458646616541353,
+    "gpt4all-13b-snoozy": 0.0,
+    "guanaco-33b": 0.0,
+    "koala-13b": 0.010752688172043012,
+    "llama-13b": 0.0,
+    "mpt-7b-chat": 0.0,
+    "oasst-pythia-12b": 0.0,
+    "palm-2": 0.0,
+    "stablelm-tuned-alpha-7b": 0.0,
+    "vicuna-13b": 0.6363636363636364,
+    "vicuna-7b": 0.0,
+    "wizardlm-13b": 0.0
+  },
+  "top_confusion_pairs": [
+    {
+      "true": "gpt-4",
+      "pred": "vicuna-13b",
+      "count": 151
+    },
+    {
+      "true": "gpt-3.5-turbo",
+      "pred": "vicuna-13b",
+      "count": 132
+    },
+    {
+      "true": "koala-13b",
+      "pred": "vicuna-13b",
+      "count": 114
+    },
+    {
+      "true": "claude-v1",
+      "pred": "vicuna-13b",
+      "count": 104
+    },
+    {
+      "true": "claude-v1",
+      "pred": "gpt-4",
+      "count": 100
+    },
+    {
+      "true": "gpt-3.5-turbo",
+      "pred": "gpt-4",
+      "count": 87
+    },
+    {
+      "true": "vicuna-13b",
+      "pred": "gpt-4",
+      "count": 80
+    },
+    {
+      "true": "oasst-pythia-12b",
+      "pred": "vicuna-13b",
+      "count": 77
+    },
+    {
+      "true": "claude-instant-v1",
+      "pred": "vicuna-13b",
+      "count": 70
+    },
+    {
+      "true": "alpaca-13b",
+      "pred": "vicuna-13b",
+      "count": 65
+    }
+  ]
+}

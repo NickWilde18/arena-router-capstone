@@ -18,10 +18,12 @@ lora:
   task_type: SEQ_CLS
 
 training:
-  output_dir: outputs/adapter_v2_kl_arch_fixed
-  # Sub-majority baselines (top1 0.10) traced to wrong LoRA target_modules
-  # for ModernBERT; see lora.target_modules note. Hparams below kept identical
-  # to run #2 (lr=5e-5, 5ep, warmup=0.1) so this run isolates the arch fix axis.
+  output_dir: outputs/adapter_best
+  # Best config from the ablation matrix (reports/ablation_matrix.md):
+  # loss=cross_entropy, lr=5e-5, warmup=0.1, no class_weight.
+  # Best val top1=0.1254 (epoch 3.56), test top1=0.1232 (+0.0045 over
+  # majority 0.1187). Training-side improvements appear saturated; the
+  # remaining gap is data-shaped, not optimization-shaped.
   num_train_epochs: 5                   # docs §4: 3
   # Larger batches saturate Tensor Cores on RTX 4070 (was 50W at batch=32).
   # gradient_checkpointing trades ~30% per-step compute for ~40% activation
@@ -30,8 +32,8 @@ training:
   per_device_eval_batch_size: 64
   gradient_accumulation_steps: 1
   gradient_checkpointing: true
-  learning_rate: 5.0e-5                 # docs §4: 2e-4 (LoRA generic); too high for 20-class head
-  warmup_ratio: 0.1                     # docs §4: 0.06; raised in line with lower lr
+  learning_rate: 5.0e-5                 # best from lr sweep
+  warmup_ratio: 0.1                     # paired with the lower lr
   weight_decay: 0.01
   # ModernBERT recommends bf16 over fp16 (more stable for GeLU/GeGLU).
   bf16: true                            # docs §4 says fp16; ModernBERT prefers bf16
@@ -54,9 +56,9 @@ training:
   torch_compile: false
 
 loss:
-  type: kl_div                  # 'kl_div' | 'cross_entropy'
-  use_soft_label: true
-  class_weight: null            # 'inv_freq' | null
+  type: cross_entropy           # 'kl_div' | 'cross_entropy'
+  use_soft_label: false         # CE uses argmax label, not soft target
+  class_weight: null            # 'inv_freq' | null  - both inv_freq runs collapsed below random
 
 data:
   train_file: data/processed/train.jsonl
