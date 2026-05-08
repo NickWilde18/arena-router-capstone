@@ -12,9 +12,10 @@ lora:
 
 training:
   output_dir: outputs/top5_ce
-  # Best top-5 config: CE + lr=5e-5 + r=16 + no class_weight.
-  # Val top1=0.2492, test top1=0.2380 (+1.26pp over majority).
-  # See reports/top5_class_restriction.md and reports/diagnostic_root_cause.md.
+  # Best deployable config: CE + lr=5e-5 + r=16 + no class_weight.
+  # Val top1=0.2492, test top1=0.2380 (+1.26pp over majority 0.2254).
+  # See reports/top5_class_restriction.md, ablation_matrix.md,
+  # diagnostic_root_cause.md, pairwise_reframing.md.
   num_train_epochs: 5                   # docs §4: 3; arch-fixed canonical
   # batch=128 + grad_checkpointing fills the 12 GB envelope on top-K splits
   # (small max_length=512 leaves headroom). For full 20-class with longer
@@ -30,9 +31,9 @@ training:
   bf16: true                            # docs §4 says fp16; ModernBERT prefers bf16
   fp16: false
   eval_strategy: steps                  # transformers 5.x renamed from evaluation_strategy
-  eval_steps: 500
-  save_steps: 500
-  logging_steps: 50
+  eval_steps: 100
+  save_steps: 100
+  logging_steps: 25
   load_best_model_at_end: true
   metric_for_best_model: top1_accuracy
   greater_is_better: true

@@ -45,3 +45,8 @@ wandb/
 
 # HF cache
 .cache/
+
+# Slidev / node
+node_modules/
+.slidev/
+slides/dist/

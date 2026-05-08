@@ -1,0 +1,29 @@
+{
+  "n_eval": 278,
+  "top1_accuracy": 0.6402877697841727,
+  "expected_winrate": 0.6402877569198608,
+  "ece": 0.03273173094653398,
+  "majority_class": "a",
+  "majority_top1": 0.5035971223021583,
+  "delta_top1_vs_majority": 0.13669064748201443,
+  "pred_distribution": {
+    "a": 140,
+    "b": 138
+  },
+  "per_class_recall": {
+    "a": 0.6428571428571429,
+    "b": 0.6376811594202898
+  },
+  "top_confusion_pairs": [
+    {
+      "true": "b",
+      "pred": "a",
+      "count": 50
+    },
+    {
+      "true": "a",
+      "pred": "b",
+      "count": 50
+    }
+  ]
+}

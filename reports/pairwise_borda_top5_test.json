@@ -1,0 +1,24 @@
+{
+  "n_eval": 1269,
+  "n_models": 5,
+  "n_pairs_ordered": 20,
+  "top1_accuracy": 0.22537431048069345,
+  "expected_winrate": 0.22693347930908203,
+  "majority_class": "gpt-4",
+  "majority_top1": 0.22537431048069345,
+  "delta_top1_vs_majority": 0.0,
+  "pred_distribution": {
+    "claude-v1": 2,
+    "gpt-3.5-turbo": 0,
+    "gpt-4": 1267,
+    "koala-13b": 0,
+    "vicuna-13b": 0
+  },
+  "per_class_recall": {
+    "claude-v1": 0.0,
+    "gpt-3.5-turbo": 0.0,
+    "gpt-4": 1.0,
+    "koala-13b": 0.0,
+    "vicuna-13b": 0.0
+  }
+}
