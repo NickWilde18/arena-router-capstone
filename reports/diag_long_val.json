@@ -1,0 +1,105 @@
+{
+  "n_eval": 389,
+  "top1_accuracy": 0.10025706940874037,
+  "expected_winrate": 0.10628172010183334,
+  "ece": 0.0458079218519684,
+  "majority_class": "gpt-4",
+  "majority_top1": 0.12853470437017994,
+  "delta_top1_vs_majority": -0.028277634961439577,
+  "pred_distribution": {
+    "RWKV-4-Raven-14B": 0,
+    "alpaca-13b": 0,
+    "chatglm-6b": 0,
+    "claude-instant-v1": 8,
+    "claude-v1": 100,
+    "dolly-v2-12b": 0,
+    "fastchat-t5-3b": 0,
+    "gpt-3.5-turbo": 51,
+    "gpt-4": 188,
+    "gpt4all-13b-snoozy": 0,
+    "guanaco-33b": 0,
+    "koala-13b": 4,
+    "llama-13b": 0,
+    "mpt-7b-chat": 0,
+    "oasst-pythia-12b": 0,
+    "palm-2": 0,
+    "stablelm-tuned-alpha-7b": 0,
+    "vicuna-13b": 38,
+    "vicuna-7b": 0,
+    "wizardlm-13b": 0
+  },
+  "per_class_recall": {
+    "RWKV-4-Raven-14B": 0.0,
+    "alpaca-13b": 0.0,
+    "chatglm-6b": 0.0,
+    "claude-instant-v1": 0.0,
+    "claude-v1": 0.17391304347826086,
+    "dolly-v2-12b": 0.0,
+    "fastchat-t5-3b": 0.0,
+    "gpt-3.5-turbo": 0.10416666666666667,
+    "gpt-4": 0.42,
+    "gpt4all-13b-snoozy": 0.0,
+    "guanaco-33b": 0.0,
+    "koala-13b": 0.0,
+    "llama-13b": 0.0,
+    "mpt-7b-chat": 0.0,
+    "oasst-pythia-12b": 0.0,
+    "palm-2": 0.0,
+    "stablelm-tuned-alpha-7b": 0.0,
+    "vicuna-13b": 0.15151515151515152,
+    "vicuna-7b": 0.0,
+    "wizardlm-13b": 0.0
+  },
+  "top_confusion_pairs": [
+    {
+      "true": "claude-v1",
+      "pred": "gpt-4",
+      "count": 29
+    },
+    {
+      "true": "gpt-3.5-turbo",
+      "pred": "gpt-4",
+      "count": 28
+    },
+    {
+      "true": "koala-13b",
+      "pred": "gpt-4",
+      "count": 22
+    },
+    {
+      "true": "gpt-4",
+      "pred": "claude-v1",
+      "count": 15
+    },
+    {
+      "true": "vicuna-13b",
+      "pred": "gpt-4",
+      "count": 13
+    },
+    {
+      "true": "palm-2",
+      "pred": "claude-v1",
+      "count": 12
+    },
+    {
+      "true": "palm-2",
+      "pred": "gpt-4",
+      "count": 12
+    },
+    {
+      "true": "gpt-3.5-turbo",
+      "pred": "claude-v1",
+      "count": 11
+    },
+    {
+      "true": "claude-instant-v1",
+      "pred": "gpt-4",
+      "count": 9
+    },
+    {
+      "true": "alpaca-13b",
+      "pred": "gpt-4",
+      "count": 8
+    }
+  ]
+}

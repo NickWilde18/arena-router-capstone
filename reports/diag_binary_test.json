@@ -1,0 +1,29 @@
+{
+  "n_eval": 589,
+  "top1_accuracy": 0.5144312393887945,
+  "expected_winrate": 0.5157328844070435,
+  "ece": 0.09029649306841334,
+  "majority_class": "gpt-4",
+  "majority_top1": 0.5008488964346349,
+  "delta_top1_vs_majority": 0.01358234295415961,
+  "pred_distribution": {
+    "gpt-4": 259,
+    "vicuna-13b": 330
+  },
+  "per_class_recall": {
+    "gpt-4": 0.4542372881355932,
+    "vicuna-13b": 0.5748299319727891
+  },
+  "top_confusion_pairs": [
+    {
+      "true": "gpt-4",
+      "pred": "vicuna-13b",
+      "count": 161
+    },
+    {
+      "true": "vicuna-13b",
+      "pred": "gpt-4",
+      "count": 125
+    }
+  ]
+}

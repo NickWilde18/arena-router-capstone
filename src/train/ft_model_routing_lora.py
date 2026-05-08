@@ -258,21 +258,35 @@ def train(cfg: dict, smoke: bool = False) -> Path:
         label2id=label2id,
     )
 
-    # --- LoRA (docs §4) ---
-    l_cfg = cfg["lora"]
-    peft_cfg = LoraConfig(
-        r=int(l_cfg["r"]),
-        lora_alpha=int(l_cfg["alpha"]),
-        lora_dropout=float(l_cfg["dropout"]),
-        target_modules=list(l_cfg["target_modules"]),
-        task_type=TaskType.SEQ_CLS,
-    )
-    model = get_peft_model(model, peft_cfg)
-    # PEFT freezes base model; for gradient_checkpointing to propagate grads
-    # through frozen layers, embeddings must opt-in to requires_grad.
-    if bool(cfg.get("training", {}).get("gradient_checkpointing", False)):
-        model.enable_input_require_grads()
-    model.print_trainable_parameters()
+    # --- LoRA (docs §4) or linear probe ---
+    linear_probe = bool(cfg.get("lora", {}).get("linear_probe", False))
+    if linear_probe:
+        # Freeze the entire encoder; train only the classifier head. Used as a
+        # diagnostic for whether the encoder representation is the bottleneck.
+        for p in model.parameters():
+            p.requires_grad = False
+        for p in model.classifier.parameters():
+            p.requires_grad = True
+        if bool(cfg.get("training", {}).get("gradient_checkpointing", False)):
+            model.enable_input_require_grads()
+        n_train = sum(p.numel() for p in model.parameters() if p.requires_grad)
+        n_tot = sum(p.numel() for p in model.parameters())
+        print(f"[linear probe] trainable params: {n_train:,} / {n_tot:,} = {n_train/n_tot*100:.4f}%")
+    else:
+        l_cfg = cfg["lora"]
+        peft_cfg = LoraConfig(
+            r=int(l_cfg["r"]),
+            lora_alpha=int(l_cfg["alpha"]),
+            lora_dropout=float(l_cfg["dropout"]),
+            target_modules=list(l_cfg["target_modules"]),
+            task_type=TaskType.SEQ_CLS,
+        )
+        model = get_peft_model(model, peft_cfg)
+        # PEFT freezes base model; for gradient_checkpointing to propagate grads
+        # through frozen layers, embeddings must opt-in to requires_grad.
+        if bool(cfg.get("training", {}).get("gradient_checkpointing", False)):
+            model.enable_input_require_grads()
+        model.print_trainable_parameters()
 
     # --- datasets ---
     train_ds = _build_dataset(Path(cfg["data"]["train_file"]), label2id)
